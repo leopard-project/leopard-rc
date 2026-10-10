@@ -21,55 +21,10 @@ XJ380（OpenXSKernel）上的 SysV init / RC 风格基本初始化系统。读�
 ```
 leopardrc/
 ├── include/          XACT SDK 头文件（xapi.h / xtuiapi.h / libsys.h / ...）
-├── src/
-│   ├── main.c        入口：root 校验、读配置、解析、启动服务、进入监督循环
-│   ├── service.h     服务管理接口声明
-│   └── service.c     服务表、fallback、解析、spawn、收尸/重启
+├── main.c        入口：root 校验、读配置、解析、启动服务、进入监督循环
+├── service.h     服务管理接口声明
+├── service.c     服务表、fallback、解析、spawn、收尸/重启
 └── initrc            配置示例（安装到 /etc/leopardrc/initrc）
-```
-
-## 构建
-
-把 XACT 交叉编译器名换成实际值，保存为 `Makefile`：
-
-```make
-CC      ?= xj380-cc          # TODO: 改为 XACT 编译器实际名
-CFLAGS  ?= -O2 -Iinclude
-LDFLAGS ?=
-
-SRC    := src/main.c src/service.c
-OBJ    := $(SRC:.c=.o)
-TARGET := leopardrc.elf
-
-.PHONY: all install clean
-
-all: $(TARGET)
-
-$(TARGET): $(OBJ)
-	$(CC) -o $@ $(OBJ) $(LDFLAGS)
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-install: $(TARGET)
-	cp $(TARGET) /apps/system/leopardrc.elf
-	cp initrc /etc/leopardrc/initrc
-
-clean:
-	rm -f $(OBJ) $(TARGET)
-```
-
-```sh
-make            # 生成 leopardrc.elf
-# 拷贝到 /system/leopard/leopardrc.elf 与 /system/etc/leopard/initrc
-make install    
-```
-
-## 安装
-
-```sh
-cp leopardrc.elf /system/leopard/leopardrc.elf
-cp initrc /system/etc/leopard/initrc
 ```
 
 ## initrc 配置格式
