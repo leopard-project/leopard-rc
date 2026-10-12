@@ -14,7 +14,7 @@ typedef struct {
 } Service;
 static Service s_services[MAX_SERVICES];
 static int     s_service_count = 0;
-static const char *s_fallback_path = "/apps/system/shell.elf";
+static const char *s_fallback_path = "/apps/system/xsh.elf";
 static char       *s_empty_envp[]  = { NULL };
 static int  add_service(char *path, char **argv, int argc, int respawn);
 static void spawn_service(Service *sv);
@@ -77,10 +77,10 @@ void supervisor_loop(void)
         for (int i = 0; i < s_service_count; i++) {
             Service *sv = &s_services[i];
             if (sv->active && sv->pid == exited) {
-                xapi_Printf("[init] exited %s status=%d\n", sv->path, status);
+                xapi_Printf("[leopard-rc] exited %s status=%d\n", sv->path, status);
                 sv->active = 0;
                 if (sv->respawn) {
-                    xapi_Printf("[init] respawn %s\n", sv->path);
+                    xapi_Printf("[leopard-rc] respawn %s\n", sv->path);
                     spawn_service(sv);
                 }
                 handled = 1;
@@ -88,7 +88,7 @@ void supervisor_loop(void)
             }
         }
         if (!handled)
-            xapi_Printf("[init] reaped unknown pid=%llu\n",
+            xapi_Printf("[leopard-rc] reaped unknown pid=%llu\n",
                         (unsigned long long)exited);
         return;   /* 本周期已收一个子进程，返回交由 main 的 for(;;) 继续调度 */
     }
@@ -120,5 +120,5 @@ static void spawn_service(Service *sv)
     }
     sv->pid    = pid;
     sv->active = 1;
-    xapi_Printf("[init] start %s pid=%llu\n", sv->path, (unsigned long long)pid);
+    xapi_Printf("[leopard-rc] start %s pid=%llu\n", sv->path, (unsigned long long)pid);
 }

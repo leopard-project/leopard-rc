@@ -4,7 +4,7 @@
 /* 非 const：str2srv()/解析会原地改写这块缓冲 */
 static char s_cfg[CFG_CAP];
 static void init_main(const char *cfg_path);
-int main(int argc, char **argv)
+int main(int argc, char *argv[], char *envp[])
 {
     /* Quick check */
     UserInfo user_info;
