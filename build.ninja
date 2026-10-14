@@ -28,12 +28,13 @@ rule stage_pkg
   command = rm -rf .pkg && mkdir -p .pkg/$$(dirname system/leopard/leopard-rc.elf) && cp $in .pkg/system/leopard/leopard-rc.elf
 
 rule package
-  command = xbps-create -A x86_64 -n leopard-rc-1.0_1 -s "Leopard PID1 init" -D "leopard-base>=1.0_1" -c "" .pkg -o $out
+  command = xbps-create -A x86_64 -n leopard-rc-1.0_1 -s "Leopard PID1 init" -D "leopard-base>=1.0_1" .pkg -o $out
 
 build .pkg/system/leopard/leopard-rc.elf: stage_pkg out/leopard-rc.elf
 build out/leopard-rc-1.0_1.x86_64.xbps: package .pkg/system/leopard/leopard-rc.elf
-build package: phony out/leopard-rc-1.0_1.x86_64.xbps
-default package
+build build: phony out/leopard-rc.elf
+build pack: phony out/leopard-rc-1.0_1.x86_64.xbps
+default build
 rule clean
   command = rm -rf out .pkg
 build clean: clean
