@@ -1,4 +1,4 @@
-# leopard-rc 构建（消费 ../leopard-sdk）
+# leopard-rc 构建 + xbps 打包
 ninja_required_version = 1.10
 cc = clang
 cxx = clang++
@@ -24,9 +24,16 @@ build out/service.c.o: cc service.c
 
 build out/leopard-rc.elf: link ../leopard-sdk/obj-tui/crt0.o ../leopard-sdk/obj-tui/libsys.cpp.o ../leopard-sdk/obj-tui/xgui_stubs.cpp.o ../leopard-sdk/obj-tui/constart.cpp.o ../leopard-sdk/obj-tui/xtuiapi.cpp.o ../leopard-sdk/obj-tui/krlibc.cpp.o out/main.c.o out/service.c.o ../leopard-sdk/obj-tui/liballoc-x86_64.a
 
-build all: phony out/leopard-rc.elf
-default all
+rule stage_pkg
+  command = rm -rf .pkg && mkdir -p .pkg/$$(dirname system/leopard/leopard-rc.elf) && cp $in .pkg/system/leopard/leopard-rc.elf
 
+rule package
+  command = xbps-create -A x86_64 -n leopard-rc-1.0_1 -s "Leopard PID1 init" -D "leopard-base>=1.0_1" -c "" .pkg -o $out
+
+build .pkg/system/leopard/leopard-rc.elf: stage_pkg out/leopard-rc.elf
+build out/leopard-rc-1.0_1.x86_64.xbps: package .pkg/system/leopard/leopard-rc.elf
+build package: phony out/leopard-rc-1.0_1.x86_64.xbps
+default package
 rule clean
-  command = rm -rf out
+  command = rm -rf out .pkg
 build clean: clean

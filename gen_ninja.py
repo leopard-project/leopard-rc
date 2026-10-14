@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""leopard-rc 构建：消费 ../leopard-sdk 的 obj-tui + include，输出 out/leopard-rc.elf。"""
+"""leopard-rc 构建 + xbps 打包。"""
 import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent          # leopard-rc/
-SDK  = ROOT / ".." / "leopard-sdk"              # SDK 根（目录名若不同，改这一行）
+SDK  = ROOT / ".." / "leopard-sdk"
 INC  = SDK / "include"
 OBJ  = SDK / "obj-tui"
 OUT  = ROOT / "out"
@@ -12,24 +12,49 @@ OUT  = ROOT / "out"
 SOURCES = ["main.c", "service.c"]
 TARGET  = OUT / "leopard-rc.elf"
 
-# SDK 运行时，链接顺序：crt0 入口 → 运行时 → 应用 → liballoc
 RUNTIME  = ["crt0.o", "libsys.cpp.o", "xgui_stubs.cpp.o",
             "constart.cpp.o", "xtuiapi.cpp.o", "krlibc.cpp.o"]
 LIBALLOC = OBJ / "liballoc-x86_64.a"
+
+PKG = {
+    "pkgname": "leopard-rc",
+    "pkgver":  "1.0_1",
+    "arch":    "x86_64",
+    "desc":    "Leopard PID1 init",
+    "deps":    "leopard-base>=1.0_1",
+    "install": "system/leopard/leopard-rc.elf",
+    "conf":    [],
+}
 
 
 def rel(p):
     p = Path(p)
     if p.is_absolute():
-        try:
-            return str(p.relative_to(ROOT))
-        except ValueError:
-            return str(p)
+        try: return str(p.relative_to(ROOT))
+        except ValueError: return str(p)
     return str(p)
 
 
 def esc(p):
     return rel(p).replace("$", "$$").replace(":", "$:").replace(" ", "$ ")
+
+
+def emit_package(L, pkg, target):
+    inst = pkg["install"]
+    conf = " ".join(pkg["conf"])
+    out  = OUT / f"{pkg['pkgname']}-{pkg['pkgver']}.{pkg['arch']}.xbps"
+    L += [
+        "rule stage_pkg",
+        f"  command = rm -rf .pkg && mkdir -p .pkg/$$(dirname {inst}) && cp $in .pkg/{inst}",
+        "",
+        "rule package",
+        f"  command = xbps-create -A {pkg['arch']} -n {pkg['pkgname']}-{pkg['pkgver']} "
+        f"-s \"{pkg['desc']}\" -D \"{pkg['deps']}\" -c \"{conf}\" .pkg -o $out",
+        "",
+    ]
+    L += [f"build .pkg/{inst}: stage_pkg {esc(target)}"]
+    L += [f"build {esc(out)}: package .pkg/{inst}"]
+    L += [f"build package: phony {esc(out)}", "default package"]
 
 
 def main():
@@ -44,7 +69,7 @@ def main():
     c_flags   = f"{common} -std=c11   -I {rel(INC)} -I . -MMD -MP"
     cpp_flags = f"{common} -std=c++11 -I {rel(INC)} -I . -Wno-write-strings -MMD -MP"
 
-    L = ["# leopard-rc 构建（消费 ../leopard-sdk）",
+    L = ["# leopard-rc 构建 + xbps 打包",
          "ninja_required_version = 1.10",
          f"cc = {cc}", f"cxx = {cxx}", f"ld = {ld}",
          f"c_flags = {c_flags}", f"cpp_flags = {cpp_flags}", ""]
@@ -69,13 +94,13 @@ def main():
 
     ins = [OBJ / n for n in RUNTIME] + app_objs + [LIBALLOC]
     L += [f"build {esc(TARGET)}: link {' '.join(esc(o) for o in ins)}", ""]
-    L += ["build all: phony " + esc(TARGET), "default all", ""]
-    L += ["rule clean", "  command = rm -rf out", "build clean: clean"]
 
+    emit_package(L, PKG, TARGET)
+
+    L += ["rule clean", "  command = rm -rf out .pkg", "build clean: clean"]
     (ROOT / "build.ninja").write_text("\n".join(L) + "\n", encoding="utf-8")
-    print("已生成 build.ninja（leopard-rc）。构建：ninja")
+    print("已生成 build.ninja（leopard-rc → .xbps）。构建：ninja")
 
 
 if __name__ == "__main__":
     main()
-
