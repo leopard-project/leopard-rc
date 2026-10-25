@@ -18,14 +18,15 @@ RUNTIME  = ["crt0.o", "libsys.cpp.o", "xgui_stubs.cpp.o",
 LIBALLOC = OBJ / "liballoc-x86_64.a"
 
 # ---- xbps 包配置 ----
+# install/data 均为相对 / 的安装路径（无前导斜杠）
 PKG = {
     "pkgname": "leopard-rc",
     "pkgver":  "1.0_1",                          # version_revision
     "arch":    "x86_64",
     "desc":    "Leopard PID1 init",
     "deps":    "leopard-base>=1.0_1",            # 运行时依赖（仅元数据，装时才校验）
-    "install": "system/leopard/leopard-rc.elf",  # 安装位置（相对 /，无前导斜杠）
-    "conf":    [],                               # conf 文件，可留空
+    "install": "system/leopard/leopard-rc.elf",  # 主二进制安装位置
+    "data":    [],
 }
 
 
@@ -45,26 +46,25 @@ def esc(p):
 
 def emit_package(L, pkg, target):
     inst = pkg["install"]
-    conf = " ".join(pkg["conf"])
+    data = pkg.get("data", [])
     out  = OUT / f"{pkg['pkgname']}-{pkg['pkgver']}.{pkg['arch']}.xbps"
 
-    extra = ""
-    if pkg["deps"]:
-        extra += f' -D "{pkg["deps"]}"'
-    if conf:
-        extra += f' -c "{conf}"'
+    args = f"-A {pkg['arch']} -n {pkg['pkgname']}-{pkg['pkgver']} -s \"{pkg['desc']}\""
+    if pkg.get("deps"):
+        args += f" -D \"{pkg['deps']}\""
 
-    L += [
-        "rule stage_pkg",
-        f"  command = rm -rf .pkg && mkdir -p .pkg/$$(dirname {inst}) && cp $in .pkg/{inst}",
-        "",
-        "rule package",
-        f"  command = xbps-create -A {pkg['arch']} -n {pkg['pkgname']}-{pkg['pkgver']} "
-        f"-s \"{pkg['desc']}\"{extra} .pkg -o $out",
-        "",
-    ]
-    L += [f"build .pkg/{inst}: stage_pkg {esc(target)}"]
-    L += [f"build {esc(out)}: package .pkg/{inst}"]
+    # 所有要打包的文件：(源, 安装路径)
+    files = [(target, inst)] + [(ROOT / s, d) for s, d in data]
+
+    # 一个 package 规则：先 stage 全部文件到 .pkg/，再 cd out 运行 xbps-create
+    # （xbps-create 无 -o，输出到 CWD，自动命名 <pkgver>.<arch>.xbps）
+    cmd = "rm -rf .pkg"
+    for src, dst in files:
+        cmd += f" && mkdir -p .pkg/$$(dirname {dst}) && cp {esc(src)} .pkg/{dst}"
+    cmd += f" && cd out && xbps-create --compression gzip {args} ../.pkg"
+
+    L += ["rule package", f"  command = {cmd}", ""]
+    L += [f"build {esc(out)}: package {' '.join(esc(s) for s, _ in files)}"]
     L += [f"build build: phony {esc(target)}"]
     L += [f"build pack: phony {esc(out)}"]
     L += ["default build"]
