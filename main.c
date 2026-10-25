@@ -12,7 +12,7 @@ int main(int argc, char *argv[], char *envp[])
     if (user_info.user_type != XUT_Root)
         xapi_Broken("LeopardRC: must be superuser");
     /* start booting */
-    const char *cfg_path = "/system/etc/leopard/initrc";
+    const char *cfg_path = "/system/config/initrc";
     if (argc > 1)
         cfg_path = argv[1];
     init_main(cfg_path);

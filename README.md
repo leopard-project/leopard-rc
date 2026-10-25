@@ -24,7 +24,7 @@ leopardrc/
 ├── main.c        入口：root 校验、读配置、解析、启动服务、进入监督循环
 ├── service.h     服务管理接口声明
 ├── service.c     服务表、fallback、解析、spawn、收尸/重启
-└── initrc            配置示例（安装到 /etc/leopard/initrc）
+└── initrc            配置示例（安装到 /system/config/initrc）
 ```
 
 ## initrc 配置格式
@@ -52,7 +52,7 @@ echo LeopardRC bootstrap done
 ## 工作原理
 
 1. `main()` 检查当前用户必须是 `XUT_Root`，否则 `xapi_Broken()` 停机。
-2. 打开 `/etc/leopard/initrc`（可用命令行参数覆盖路径），`xapi_ReadFile` 读入缓冲。
+2. 打开 `/system/config/initrc`（可用命令行参数覆盖路径），`xapi_ReadFile` 读入缓冲。
 3. 逐行解析：`echo` / `sleep` 立即执行；其余按「路径 + 参数」登记进服务表。
 4. `load_service()` 对每个服务 `xapi_Fork()`，子进程 `xapi_Execve()` 替换镜像。
 5. `supervisor_loop()` 循环 `wait4(-1)` 收尸：
