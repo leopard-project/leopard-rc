@@ -99,27 +99,28 @@ void supervisor_loop(void)
         int      status = 0;
         uint64_t exited = enter_syscall(SYS_WAIT4, (uint64_t)-1,
                                         (uint64_t)&status, 0, 0, 0, 0);
-        if ((int64_t)exited > 0) {
-                int handled = 0;
-                for (int i = 0; i < s_service_count; i++) {
-                        Service *sv = &s_services[i];
-                        if (sv->active && sv->pid == exited) {
-                                xapi_Printf("[leopard-rc] exited %s status=%d\n", sv->path, status);
-                                sv->active = 0;
-                                if (sv->respawn) {
-                                        xapi_Printf("[leopard-rc] respawn %s\n", sv->path);
-                                        spawn_service(sv);
-                                }
-                                handled = 1;
-                                break;
-                        }
-                }
-                if (!handled)
-                        xapi_Printf("[leopard-rc] reaped unknown pid=%llu\n",
-                                    (unsigned long long)exited);
-                return;   /* 本周期已收一个子进程，返回交由 main 的 for(;;) 继续调度 */
+        /* 没有子进程可收（-ECHILD）-> 短睡，避免空转 */
+        if ((int64_t)exited <= 0) {
+                xapi_Sleep(200);
+                return; //返回到下一个循环
         }
-        xapi_Sleep(200);   /* 没有子进程可收（-ECHILD）→ 短睡，避免空转 */
+        int handled = 0;
+        for (int i = 0; i < s_service_count; i++) {
+                Service *sv = &s_services[i];
+                if(!sv->active || sv->pid != exited) continue;
+
+                xapi_Printf("[leopard-rc] exited %s status=%d\n", sv->path, status);
+                sv->active = 0;
+                if (sv->respawn) {
+                        xapi_Printf("[leopard-rc] respawn %s\n", sv->path);
+                        spawn_service(sv);
+                }
+                handled = 1;
+                break;
+        }
+        if (!handled)
+                xapi_Printf("[leopard-rc] reaped unknown pid=%llu\n",
+                            (unsigned long long)exited);
 }
 
 static int add_service(char *path, char **argv, int argc, int respawn)
