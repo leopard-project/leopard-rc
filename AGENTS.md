@@ -13,3 +13,11 @@ wait4 收尸并对标 respawn 的服务自动重启。基于 XAPI（`xtuiapi.h`�
 ## 红线
 - 不写回 OpenXSKernel/OpenXJ380；本仓库只产出用户态二进制。
 - initrc 是启动期配置，必须在引导分区 `/system/config/`。
+
+## 加载语义（install-closure 后）
+- `respawn <path>` → 后台拉起，收尸后自动重启。
+- `<path>`（裸路径，无关键字）→ **一次性服务**：`load_service()` 会 wait4 等它跑完再继续下一个，
+  这样 `leopard-mountd` 挂好 `/apps`、`/users` 之后才拉起 getty/oobe，避免服务抢跑。
+- 子进程环境变量为空（`envp = { NULL }`）：服务二进制必须用绝对路径，PATH 无效。
+- initrc 缺失时回退 `respawn /apps/system/xsh.elf`（该二进制当前无包，会无限重启）——装机流程
+  必须保证 `leopard-base` 的 `system/config/initrc` 就位。

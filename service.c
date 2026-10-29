@@ -72,7 +72,26 @@ void str2srv(char *line)
 void load_service(void)
 {
         for (int i = 0; i < s_service_count; i++)
-                spawn_service(&s_services[i]);
+        {
+                Service *sv = &s_services[i];
+                spawn_service(sv);
+                if (sv->respawn) continue;
+
+                /* 一次性服务（如 leopard-mountd）必须跑完再继续：
+                   /apps、/users 是后续服务（getty/oobe/shell）的落地位置，不能跟它们抢跑。 */
+                int     status = 0;
+                int64_t waited = (int64_t)enter_syscall(SYS_WAIT4, (uint64_t)sv->pid,
+                                                        (uint64_t)&status, 0, 0, 0, 0);
+                if (waited == (int64_t)sv->pid)
+                {
+                        xapi_Printf("[leopard-rc] oneshot done %s status=%d\n", sv->path, status);
+                        sv->active = 0;
+                }
+                else
+                {
+                        xapi_Printf("[leopard-rc] oneshot wait failed %s\n", sv->path);
+                }
+        }
 }
 
 void supervisor_loop(void)
