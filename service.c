@@ -1,6 +1,6 @@
 #include "service.h"
 #include "xtuiapi.h"   /* xapi_* / WSTR */
-#include "libsys.h"    /* enter_syscall / SYS_WAIT4 */
+#include <sys/wait.h>   /* waitpid（v5 SDK 的 syscall 封装） */
 
 #define MAX_SERVICES 64
 #define MAX_LINE     512
@@ -79,10 +79,9 @@ void load_service(void)
 
                 /* 一次性服务（如 leopard-mountd）必须跑完再继续：
                    /apps、/users 是后续服务（getty/oobe/shell）的落地位置，不能跟它们抢跑。 */
-                int     status = 0;
-                int64_t waited = (int64_t)enter_syscall(SYS_WAIT4, (uint64_t)sv->pid,
-                                                        (uint64_t)&status, 0, 0, 0, 0);
-                if (waited == (int64_t)sv->pid)
+                int status = 0;
+                int waited = waitpid((int)sv->pid, &status, 0);
+                if (waited == (int)sv->pid)
                 {
                         xapi_Printf("[leopard-rc] oneshot done %s status=%d\n", sv->path, status);
                         sv->active = 0;
@@ -96,18 +95,17 @@ void load_service(void)
 
 void supervisor_loop(void)
 {
-        int      status = 0;
-        uint64_t exited = enter_syscall(SYS_WAIT4, (uint64_t)-1,
-                                        (uint64_t)&status, 0, 0, 0, 0);
-        /* 没有子进程可收（-ECHILD）-> 短睡，避免空转 */
-        if ((int64_t)exited <= 0) {
+        int status = 0;
+        int exited = waitpid(-1, &status, 0);
+        /* 没有子进程可收（ECHILD -> -1）-> 短睡，避免空转 */
+        if (exited <= 0) {
                 xapi_Sleep(200);
                 return; //返回到下一个循环
         }
         int handled = 0;
         for (int i = 0; i < s_service_count; i++) {
                 Service *sv = &s_services[i];
-                if(!sv->active || sv->pid != exited) continue;
+                if(!sv->active || sv->pid != (uint64_t)exited) continue;
 
                 xapi_Printf("[leopard-rc] exited %s status=%d\n", sv->path, status);
                 sv->active = 0;
@@ -119,8 +117,7 @@ void supervisor_loop(void)
                 break;
         }
         if (!handled)
-                xapi_Printf("[leopard-rc] reaped unknown pid=%llu\n",
-                            (unsigned long long)exited);
+                xapi_Printf("[leopard-rc] reaped unknown pid=%d\n", exited);
 }
 
 static int add_service(char *path, char **argv, int argc, int respawn)

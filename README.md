@@ -12,8 +12,8 @@ XJ380（OpenXSKernel）上的 SysV init / RC 风格基本初始化系统。读�
   - 内置指令：`echo`、`sleep`
   - `#` 注释、空行
 - 配置缺失时回退拉起一个 shell（`/apps/system/shell.elf`），避免系统进入"无服务"状态。
-- 监督循环用 POSIX `wait4` 收尸（`wait4` 不在 XAPI 里，经 `libsys.h` 的
-  `enter_syscall(SYS_WAIT4, ...)` 调用）。
+- 监督循环用 SDK 的 `waitpid()` 收尸（v5 的 POSIX 封装，内部是 `SYS_WAIT4`；
+  XAPI 没有 wait 等价物，所以用 POSIX 层）。
 - 所有输出直接使用 `xapi_Printf(...)`。
 
 ## 目录结构
@@ -55,7 +55,7 @@ echo LeopardRC bootstrap done
 2. 打开 `/system/config/initrc`（可用命令行参数覆盖路径），`xapi_ReadFile` 读入缓冲。
 3. 逐行解析：`echo` / `sleep` 立即执行；其余按「路径 + 参数」登记进服务表。
 4. `load_service()` 对每个服务 `xapi_Fork()`，子进程 `xapi_Execve()` 替换镜像。
-5. `supervisor_loop()` 循环 `wait4(-1)` 收尸：
+5. `supervisor_loop()` 循环 `waitpid(-1, ...)` 收尸：
    - 匹配到服务 → 记录退出状态，`respawn` 服务自动重启；
    - 没有子进程（`-ECHILD`）→ `xapi_Sleep(200)` 避免空转。
 
@@ -63,8 +63,8 @@ echo LeopardRC bootstrap done
 
 - **WSTR 即 `char*`**：SDK 头 `stdint.h` 中 `typedef char* WSTR`，所有 XAPI
   字符串参数实为窄字符串，故代码统一使用普通字符串字面量（不用 `L"..."`）。
-- **`wait4` 不在 XAPI 内**：它属于内核的 POSIX/Linux ABI 层，通过
-  `enter_syscall(SYS_WAIT4, ...)` 调用，是 init 收尸与重启能力的关键。
+- **`wait4` 不在 XAPI 内**：它属于内核的 POSIX/Linux ABI 层，SDK 以 `waitpid()` 暴露
+  （内部 `SYS_WAIT4`），是 init 收尸与重启能力的关键。
 - **已知内核限制**（来自 `OpenXSKernel`）：
   - `mount(165)` / `umount2(166)` / `pivot_root(155)` 已声明编号，但
     `kernel/syscall/syscall.cpp` 的 dispatch 尚未接线，调用会 `-ENOSYS`。

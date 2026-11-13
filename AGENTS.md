@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE — leopard-rc
 
 PID1 初始化系统（SysV init/RC 风格）。读 `/system/config/initrc`，fork/exec 拉起各用户态服务，
-wait4 收尸并对标 respawn 的服务自动重启。基于 XAPI（`xtuiapi.h`），进程拉起用 `xapi_Fork()`+`xapi_Execve()`。
+`waitpid()` 收尸并对标 respawn 的服务自动重启。基于 XAPI（`xtuiapi.h`），进程拉起用 `xapi_Fork()`+`xapi_Execve()`。
 
 ## 构建
     python3 gen_ninja.py && ninja build   # → out/leopard-rc.elf
@@ -16,7 +16,7 @@ wait4 收尸并对标 respawn 的服务自动重启。基于 XAPI（`xtuiapi.h`�
 
 ## 加载语义（install-closure 后）
 - `respawn <path>` → 后台拉起，收尸后自动重启。
-- `<path>`（裸路径，无关键字）→ **一次性服务**：`load_service()` 会 wait4 等它跑完再继续下一个，
+- `<path>`（裸路径，无关键字）→ **一次性服务**：`load_service()` 会 `waitpid()` 等它跑完再继续下一个，
   这样 `leopard-mountd` 挂好 `/apps`、`/users` 之后才拉起 getty/oobe，避免服务抢跑。
 - 子进程环境变量为空（`envp = { NULL }`）：服务二进制必须用绝对路径，PATH 无效。
 - initrc 缺失时回退 `respawn /apps/system/xsh.elf`（该二进制当前无包，会无限重启）——装机流程
