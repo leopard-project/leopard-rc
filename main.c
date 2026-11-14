@@ -17,8 +17,16 @@ int main(int argc, char *argv[], char *envp[])
         if (argc > 1)
                 cfg_path = argv[1];
 
-        /* Permission policy decides whether this process may read the boot
-         * configuration; do not special-case the current user type here. */
+        /* Capability gate: the init process needs ordinary read, system
+         * directory traversal and system-file read.  The policy data decides
+         * which grade gets those bits; do not special-case a user type. */
+        UserPermisson perms;
+        if (xapi_GetCurrentPermissions(&perms) != 0 ||
+            !perms.ReadFile || !perms.VisitSysDir || !perms.ReadSysFile) {
+                xapi_Broken("LeopardRC: insufficient permissions for init");
+        }
+
+        /* Then check the actual boot configuration path. */
         if (xapi_QueryFileAccess(cfg_path, XFA_READ) != 0)
                 xapi_Broken("LeopardRC: permission denied reading initrc");
 

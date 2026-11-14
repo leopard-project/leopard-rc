@@ -20,7 +20,7 @@ CRT_LIBS = [LIB / "libxact.a", LIB / "liballoc.a"]
 # install/data 均为相对 / 的安装路径（无前导斜杠）
 PKG = {
     "pkgname": "leopard-rc",
-    "pkgver":  "1.0_2",                          # version_revision
+    "pkgver":  "1.0_3",                          # version_revision
     "arch":    "x86_64",
     "desc":    "Leopard PID1 init",
     "deps":    "leopard-base>=1.0_1",            # 运行时依赖（仅元数据，装时才校验）
