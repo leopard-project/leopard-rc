@@ -12,16 +12,16 @@ int main(int argc, char *argv[], char *envp[])
 {
         (void)envp;
 
-        /* Quick check */
-        UserInfo user_info;
-        xapi_GetCurrentUser(&user_info);
-        if (user_info.user_type != XUT_Root)
-                xapi_Broken("LeopardRC: must be superuser");
-
         /* start booting */
         const char *cfg_path = "/system/config/initrc";
         if (argc > 1)
                 cfg_path = argv[1];
+
+        /* Permission policy decides whether this process may read the boot
+         * configuration; do not special-case the current user type here. */
+        if (xapi_QueryFileAccess(cfg_path, XFA_READ) != 0)
+                xapi_Broken("LeopardRC: permission denied reading initrc");
+
         init_main(cfg_path);
         return 0;
 }
