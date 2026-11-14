@@ -75,7 +75,6 @@ void load_service(void)
         {
                 Service *sv = &s_services[i];
                 spawn_service(sv);
-                if (!sv->active) continue; /* permission denied */
                 if (sv->respawn) continue;
 
                 /* 一次性服务（如 leopard-mountd）必须跑完再继续：
@@ -140,17 +139,6 @@ static int add_service(char *path, char **argv, int argc, int respawn)
 
 static void spawn_service(Service *sv)
 {
-        /* Exec needs read access to the binary (and traversal of its parent
-         * directories).  Let the permission policy answer instead of checking
-         * the current user type. */
-        if (xapi_QueryFileAccess(sv->path, XFA_READ) != 0) {
-                xapi_Printf("[leopard-rc] permission denied: %s\n", sv->path);
-                sv->active = 0;
-                sv->pid = 0;
-                sv->respawn = 0;
-                return;
-        }
-
         uint64_t pid = xapi_Fork();
         if (pid == 0) {
                 xapi_Execve((WSTR)sv->path, (WSTR *)sv->argv, (WSTR *)s_empty_envp);

@@ -51,10 +51,10 @@ echo LeopardRC bootstrap done
 
 ## 工作原理
 
-1. `main()` 先用 `xapi_GetCurrentPermissions()` 检查 R/SV/SR 能力位，再通过 `xapi_QueryFileAccess(initrc, XFA_READ)` 检查实际启动配置；无权限则 `xapi_Broken()` 停机。
+1. `main()` 用 `xapi_GetCurrentPermissions()` 检查 R/SV/SR 能力位；无权限则 `xapi_Broken()` 停机。
 2. 打开 `/system/config/initrc`（可用命令行参数覆盖路径），`xapi_ReadFile` 读入缓冲。
 3. 逐行解析：`echo` / `sleep` 立即执行；其余按「路径 + 参数」登记进服务表。
-4. `spawn_service()` 先用 `xapi_QueryFileAccess(path, XFA_READ)` 检查执行权限，再 `xapi_Fork()` + `xapi_Execve()`。
+4. `spawn_service()` 直接 `xapi_Fork()` + `xapi_Execve()`；文件权限由 VFS/exec 路径检查。
 5. `supervisor_loop()` 循环 `waitpid(-1, ...)` 收尸：
    - 匹配到服务 → 记录退出状态，`respawn` 服务自动重启；
    - 没有子进程（`-ECHILD`）→ `xapi_Sleep(200)` 避免空转。

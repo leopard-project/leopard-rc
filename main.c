@@ -26,10 +26,6 @@ int main(int argc, char *argv[], char *envp[])
                 xapi_Broken("LeopardRC: insufficient permissions for init");
         }
 
-        /* Then check the actual boot configuration path. */
-        if (xapi_QueryFileAccess(cfg_path, XFA_READ) != 0)
-                xapi_Broken("LeopardRC: permission denied reading initrc");
-
         init_main(cfg_path);
         return 0;
 }
