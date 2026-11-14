@@ -7,7 +7,7 @@ PID1 初始化系统（SysV init/RC 风格）。读 `/system/config/initrc`，fo
     python3 gen_ninja.py && ninja build   # → out/leopard-rc.elf
     ninja pack                            # → out/leopard-rc-*.xbps
 
-- 静态 ELF，依赖 `../XACT-CRT`（`include/` 头 + `lib/x86_64/` 启动对象与 `libxact.a`）。
+- 静态 ELF，依赖 `../XJ380-SDK/out/crt`（`include/` 头 + `lib/x86_64/` 启动对象与 `libxact.a`）。
 - 安装位置 `/system/leopard/leopard-rc.elf`（内核 main.cpp 的 init 路径也指向这里）。
 
 ## 红线
