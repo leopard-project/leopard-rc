@@ -32,7 +32,7 @@ int main(int argc, char *argv[], char *envp[])
 
 static void init_main(const char *cfg_path)
 {
-        xapi_Printf("LeopardRC: init started, config=%s\n", cfg_path);
+        rc_log("LeopardRC: init started, config=%s\n", cfg_path);
         XFILE *fp = xapi_OpenFile((WSTR)cfg_path);
         if (fp == NULL) {
                 fallback(cfg_path);
@@ -44,7 +44,7 @@ static void init_main(const char *cfg_path)
         uint64_t got = xapi_ReadFile((WSTR)cfg_path, s_cfg, len, 0);
         xapi_CloseFile(fp);
         s_cfg[got] = '\0';
-        xapi_Printf("LeopardRC: read %llu bytes\n", (unsigned long long)got);
+        rc_log("LeopardRC: read %llu bytes\n", (unsigned long long)got);
 
         char *line = s_cfg;
         while (*line) {

@@ -1,5 +1,7 @@
 #include "service.h"
 #include "xtuiapi.h"   /* xapi_* / WSTR */
+#include <stdarg.h>
+#include <stdio.h>
 #include <sys/wait.h>   /* waitpid（v5 SDK 的 syscall 封装） */
 
 #define MAX_SERVICES 64
@@ -20,13 +22,28 @@ static int     s_service_count = 0;
 static const char *s_fallback_path = "/apps/system/xsh.elf";
 static char       *s_empty_envp[]  = { NULL };
 
+void rc_log(const char *format, ...)
+{
+        char    buffer[256];
+        va_list args;
+        int     length;
+
+        va_start(args, format);
+        length = vsnprintf(buffer, sizeof(buffer), format, args);
+        va_end(args);
+        if (length > 0) {
+                if ((size_t)length > sizeof(buffer) - 1) length = (int)sizeof(buffer) - 1;
+                xapi_OutputSerial((WSTR)buffer);
+        }
+}
+
 static int  add_service(char *, char **, int, int);
 static void spawn_service(Service *);
 
 void fallback(const char *cfg_path)
 {
-        xapi_Printf("LeopardRC: cannot open config %s\n", cfg_path);
-        xapi_Printf("LeopardRC: falling back to %s\n", s_fallback_path);
+        rc_log("LeopardRC: cannot open config %s\n", cfg_path);
+        rc_log("LeopardRC: falling back to %s\n", s_fallback_path);
         char *fallback_argv[2];
         fallback_argv[0] = (char *)s_fallback_path;
         fallback_argv[1] = NULL;
@@ -58,7 +75,7 @@ void str2srv(char *line)
                         if (off >= sizeof(buf) - 1)
                                 break;
                 }
-                xapi_Printf("%s\n", buf);
+                rc_log("%s\n", buf);
         } else if (strcmp(argv[0], "sleep") == 0) {
                 uint64_t ms = argc > 1 ? (uint64_t)atoi(argv[1]) : 0;
                 xapi_Sleep(ms);
@@ -83,12 +100,12 @@ void load_service(void)
                 int waited = waitpid((int)sv->pid, &status, 0);
                 if (waited == (int)sv->pid)
                 {
-                        xapi_Printf("[leopard-rc] oneshot done %s status=%d\n", sv->path, status);
+                        rc_log("[leopard-rc] oneshot done %s status=%d\n", sv->path, status);
                         sv->active = 0;
                 }
                 else
                 {
-                        xapi_Printf("[leopard-rc] oneshot wait failed %s\n", sv->path);
+                        rc_log("[leopard-rc] oneshot wait failed %s\n", sv->path);
                 }
         }
 }
@@ -107,17 +124,17 @@ void supervisor_loop(void)
                 Service *sv = &s_services[i];
                 if(!sv->active || sv->pid != (uint64_t)exited) continue;
 
-                xapi_Printf("[leopard-rc] exited %s status=%d\n", sv->path, status);
+                rc_log("[leopard-rc] exited %s status=%d\n", sv->path, status);
                 sv->active = 0;
                 if (sv->respawn) {
-                        xapi_Printf("[leopard-rc] respawn %s\n", sv->path);
+                        rc_log("[leopard-rc] respawn %s\n", sv->path);
                         spawn_service(sv);
                 }
                 handled = 1;
                 break;
         }
         if (!handled)
-                xapi_Printf("[leopard-rc] reaped unknown pid=%d\n", exited);
+                rc_log("[leopard-rc] reaped unknown pid=%d\n", exited);
 }
 
 static int add_service(char *path, char **argv, int argc, int respawn)
@@ -142,10 +159,10 @@ static void spawn_service(Service *sv)
         uint64_t pid = xapi_Fork();
         if (pid == 0) {
                 xapi_Execve((WSTR)sv->path, (WSTR *)sv->argv, (WSTR *)s_empty_envp);
-                xapi_Printf("LeopardRC: execve failed: %s\n", sv->path);
+                rc_log("LeopardRC: execve failed: %s\n", sv->path);
                 xapi_Exit(127);
         }
         sv->pid    = pid;
         sv->active = 1;
-        xapi_Printf("[leopard-rc] start %s pid=%llu\n", sv->path, (unsigned long long)pid);
+        rc_log("[leopard-rc] start %s pid=%llu\n", sv->path, (unsigned long long)pid);
 }
