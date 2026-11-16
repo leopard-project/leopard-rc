@@ -1,6 +1,6 @@
 # LeopardRC
 
-XJ380（OpenXSKernel）上的 SysV init / RC 风格基本初始化系统。读取一份
+XJ380（leopard-xsk）上的 SysV init / RC 风格基本初始化系统。读取一份
 `initrc` 配置文件，拉起其它用户态服务，并对服务做收尸与 `respawn` 自动重启。
 
 ## 特性
@@ -65,7 +65,7 @@ echo LeopardRC bootstrap done
   字符串参数实为窄字符串，故代码统一使用普通字符串字面量（不用 `L"..."`）。
 - **`wait4` 不在 XAPI 内**：它属于内核的 POSIX/Linux ABI 层，SDK 以 `waitpid()` 暴露
   （内部 `SYS_WAIT4`），是 init 收尸与重启能力的关键。
-- **已知内核限制**（来自 `OpenXSKernel`）：
+- **已知内核限制**（来自 `leopard-xsk`）：
   - `mount(165)` / `umount2(166)` / `pivot_root(155)` 已声明编号，但
     `kernel/syscall/syscall.cpp` 的 dispatch 尚未接线，调用会 `-ENOSYS`。
   - `xapi_GetTaskList` / `xapi_KillProcess` 当前为空壳（`-ENOSYS`），

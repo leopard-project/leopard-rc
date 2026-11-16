@@ -7,12 +7,12 @@ PID1 初始化系统（SysV init/RC 风格）。读 `/system/config/initrc`，fo
     python3 gen_ninja.py && ninja build   # → out/leopard-rc.elf
     ninja pack                            # → out/leopard-rc-*.xbps
 
-- 静态 ELF，依赖 `../XJ380-SDK/out/crt`（`include/` 头 + `lib/x86_64/` 启动对象与 `libxact.a`）。
+- 静态 ELF，依赖 `../leopard-sdk/out/crt`（`include/` 头 + `lib/x86_64/` 启动对象与 `libxact.a`）。
 - 安装位置 `/system/leopard/leopard-rc.elf`（内核 main.cpp 的 init 路径也指向这里）。
 - 启动权限用 `xapi_GetCurrentPermissions()` 检查 R/SV/SR；不再判断 `UserType == Root`。
 
 ## 红线
-- 不写回 OpenXSKernel/OpenXJ380；本仓库只产出用户态二进制。
+- 不写回 leopard-xsk/OpenXJ380；本仓库只产出用户态二进制。
 - initrc 是启动期配置，必须在引导分区 `/system/config/`。
 
 ## 加载语义（install-closure 后）
