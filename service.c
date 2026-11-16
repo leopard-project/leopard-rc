@@ -2,7 +2,7 @@
 #include "xtuiapi.h"   /* xapi_* / WSTR */
 #include <stdarg.h>
 #include <stdio.h>
-#include <sys/wait.h>   /* waitpid（v5 SDK 的 syscall 封装） */
+#include <sys/wait.h>   /* waitpid (v5 SDK syscall wrapper) */
 
 #define MAX_SERVICES 64
 #define MAX_LINE     512
@@ -11,7 +11,6 @@
 typedef struct {
         char     *path;
         char     *argv[MAX_ARGS];
-        int       argc;
         int       respawn;
         uint64_t  pid;
         int       active;
@@ -94,8 +93,8 @@ void load_service(void)
                 spawn_service(sv);
                 if (sv->respawn) continue;
 
-                /* 一次性服务（如 leopard-mountd）必须跑完再继续：
-                   /apps、/users 是后续服务（getty/oobe/shell）的落地位置，不能跟它们抢跑。 */
+                /* One-shot services (such as leopard-mountd) must finish before continuing:
+                   /apps and /users are the landing places for later services (getty/oobe/shell), so they must not race them. */
                 int status = 0;
                 int waited = waitpid((int)sv->pid, &status, 0);
                 if (waited == (int)sv->pid)
@@ -114,10 +113,10 @@ void supervisor_loop(void)
 {
         int status = 0;
         int exited = waitpid(-1, &status, 0);
-        /* 没有子进程可收（ECHILD -> -1）-> 短睡，避免空转 */
+        /* no child to reap (ECHILD -> -1) -> short sleep to avoid spinning */
         if (exited <= 0) {
                 xapi_Sleep(200);
-                return; //返回到下一个循环
+                return; // return to the next loop
         }
         int handled = 0;
         for (int i = 0; i < s_service_count; i++) {
@@ -150,7 +149,6 @@ static int add_service(char *path, char **argv, int argc, int respawn)
         for (i = 0; i < argc && i < MAX_ARGS - 1; i++)
                 sv->argv[i] = argv[i];
         sv->argv[i] = NULL;
-        sv->argc    = i;
         return 0;
 }
 

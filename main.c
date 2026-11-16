@@ -3,7 +3,7 @@
 
 #define CFG_CAP (128 * 1024)
 
-/* 非 const：str2srv()/解析会原地改写这块缓冲 */
+/* not const: str2srv()/parsing rewrites this buffer in place */
 static char s_cfg[CFG_CAP];
 
 static void init_main(const char *);
